@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Línea de Tiempo - Estilo Prezi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a; 
+            --bg-medium: #1e293b;
+            --text-light: #cbd5e1;
+            --text-medium: #94a3b8; 
+            --accent-green: #34d399; 
+            --accent-green-dark: #059669;
+            --shadow-green: rgba(52, 211, 153, 0.5);
+        }
+
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            overflow: hidden; 
+        }
+
+        #prezi-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #prezi-canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transition: transform 1.2s cubic-bezier(0.77, 0, 0.175, 1);
+            transform-origin: 0 0;
+        }
+
+        .step {
+            position: absolute;
+            width: 700px; 
+            padding: 2rem;
+            background-color: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--accent-green-dark);
+            border-radius: 1rem;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            opacity: 0.4;
+            transition: opacity 1s ease;
+            will-change: transform; 
+        }
+
+        .step.active {
+            opacity: 1;
+            border-color: var(--accent-green);
+            box-shadow: 0 0 30px var(--shadow-green);
+        }
+
+        .header-title {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--accent-green);
+            text-shadow: 0 0 8px var(--shadow-green);
+        }
+        
+        .step-date {
+            color: var(--accent-green);
+            font-weight: bold;
+        }
+
+        .step-title {
+            color: white;
+            font-weight: bold;
+        }
+
+        .nav-button {
+            background-color: var(--bg-medium);
+            border: 1px solid var(--accent-green-dark);
+            font-family: 'Orbitron', sans-serif;
+            transition: all 0.2s ease;
+            color: var(--accent-green);
+        }
+        .nav-button:hover {
+            background-color: var(--accent-green);
+            color: var(--bg-dark);
+            box-shadow: 0 0 15px var(--shadow-green);
+        }
+        
+        .nav-controls {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        .modal-overlay {
+            background-color: rgba(15, 23, 42, 0.8);
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            background-color: var(--bg-medium);
+            border: 1px solid var(--accent-green);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .modal-image {
+            max-height: 70vh;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="prezi-container">
+        <div id="prezi-canvas">
+        </div>
+    </div>
+
+    <div class="nav-controls">
+        <div class="text-gray-400 text-sm">Presiona <kbd class="border border-gray-500 rounded px-2 py-1">Espacio</kbd> para avanzar</div>
+    </div>
+
+    <div id="modal" class="modal-overlay fixed inset-0 flex items-center justify-center p-4 hidden z-50">
+        <div id="modal-content" class="modal-content p-6 rounded-lg shadow-2xl relative max-w-4xl w-full opacity-0 transform scale-95">
+            <button id="modal-close-btn" class="absolute top-2 right-3 text-white text-3xl hover:text-green-300">&times;</button>
+            <h3 id="modal-title" class="text-2xl font-bold text-white mb-4">Galería de Imágenes</h3>
+            <div id="modal-images-container" class="flex flex-wrap justify-center gap-4"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const timelineData = [
+                { 
+                    date: "Evolución del Software", 
+                    title: "Un Viaje Histórico", 
+                    description: "Basado en el documento 'Evolución del software'. Presiona la barra espaciadora para comenzar el recorrido.",
+                    isTitle: true
+                },
+                { 
+                    date: "1) Siglo XIX", 
+                    title: "Bases Teóricas", 
+                    description: "Ada Lovelace y Charles Babbage desarrollan el primer algoritmo para la máquina analítica, sentando las bases conceptuales de la computación.",
+                    images: [ 
+                        { url: 'images/maquinaanalitica.png', alt: 'Máquina analítica' }, 
+                        { url: 'images/lovelace.png', alt: 'Ada Lovelace' }, 
+                        { url: 'images/baggage.png', alt: 'Charles Babbage' } 
+                    ]
+                },
+                { 
+                    date: "2) Primera Mitad del Siglo XX", 
+                    title: "La Máquina de Turing", 
+                    description: "Alan Turing formula la teoría del software con su 'máquina de Turing', un modelo universal y teórico que representa una máquina de computación.",
+                    images: [ 
+                        { url: 'images/maquinadeturing.png', alt: 'Máquina de Turing' }, 
+                        { url: 'images/turing.png', alt: 'Alan Turing' } 
+                    ] 
+                },
+                { 
+                    date: "3) Década de 1940", 
+                    title: "Primeras Computadoras Digitales", 
+                    description: "Se desarrollan las primeras computadoras con programas almacenados, utilizando instrucciones escritas directamente en código binario."
+                },
+                { 
+                    date: "4) Años 50 y 60", 
+                    title: "Nacen los Sistemas Operativos", 
+                    description: "Se crean los primeros sistemas operativos (batch, multiprogramación, tiempo compartido) para facilitar la interacción entre el usuario y la máquina.",
+                    images: [ 
+                        { url: 'images/ibm-maquina.png', alt: 'Ordenador IBM 704' } 
+                    ] 
+                },
+                { 
+                    date: "5) Década de 1960", 
+                    title: "Lenguajes de Alto Nivel", 
+                    description: "Se popularizan lenguajes como FORTRAN y COBOL. El término 'ingeniería de software' comienza a utilizarse para describir la nueva disciplina."
+                },
+                { 
+                    date: "6) Década de 1970", 
+                    title: "Bases de la Ingeniería de Software", 
+                    description: "Se establecen metodologías formales para el desarrollo y la gestión de proyectos, con la aparición de la programación estructurada y diagramas de flujo."
+                },
+                { 
+                    date: "7) Décadas de 1980 y 90", 
+                    title: "El Software como Producto Comercial", 
+                    description: "Empresas como Microsoft y Apple lanzan sus sistemas operativos (MS-DOS, MacOS), consolidando el software como un producto de consumo masivo."
+                },
+                { 
+                    date: "8) Finales S. XX y Principios S. XXI", 
+                    title: "Expansión Masiva: Web y Móviles", 
+                    description: "La popularización de navegadores web, teléfonos inteligentes y apps transforma la sociedad, integrando el software en la vida cotidiana."
+                },
+                {
+                    date: "Futuro",
+                    title: "La Evolución Continúa",
+                    description: "La historia sigue con la inteligencia artificial, la computación en la nube y un enfoque constante en mejorar la calidad, eficiencia y seguridad del software.",
+                    isTitle: true
+                }
+            ];
+
+            const layoutData = [
+                { x: 0, y: 0, scale: 3.5, rotate: 0 },        
+                { x: 1500, y: 0, scale: 1, rotate: 0 },     
+                { x: 2500, y: 800, scale: 1, rotate: 20 },    
+                { x: 1500, y: 1600, scale: 1, rotate: 0 },    
+                { x: 0, y: 1800, scale: 1, rotate: -20 },     
+                { x: -1500, y: 1600, scale: 1, rotate: 0 },   
+                { x: -2500, y: 800, scale: 1, rotate: 20 },    
+                { x: -1500, y: 0, scale: 1, rotate: 0 },      
+                { x: 0, y: -1200, scale: 1.5, rotate: -20 },  
+                { x: 4000, y: -2000, scale: 4, rotate: 0 },  
+            ];
+
+            let currentIndex = 0;
+            const canvas = document.getElementById('prezi-canvas');
+            
+            function initialize() {
+                timelineData.forEach((data, index) => {
+                    const layout = layoutData[index];
+                    const stepEl = document.createElement('div');
+                    stepEl.classList.add('step');
+                    stepEl.id = `step-${index}`;
+                    stepEl.style.transform = `translate(-50%, -50%) translate(${layout.x}px, ${layout.y}px) scale(${layout.scale}) rotate(${layout.rotate}deg)`;
+
+                    let contentHTML = '';
+                    if (data.isTitle) {
+                        contentHTML = `<h1 class="header-title text-5xl md:text-6xl text-center">${data.title}</h1><p class="text-center mt-4 text-lg text-gray-400">${data.description}</p>`;
+                    } else {
+                        contentHTML = `
+                            <span class="step-date text-lg">${data.date}</span>
+                            <h3 class="step-title text-2xl md:text-3xl mt-2 mb-4">${data.title}</h3>
+                            <p class="text-gray-300 leading-relaxed">${data.description}</p>
+                            ${(data.images && data.images.length > 0) ? `<button data-index="${index}" class="gallery-btn mt-4 nav-button text-sm font-bold py-2 px-4 rounded">Ver Galería</button>` : ''}
+                        `;
+                    }
+                    stepEl.innerHTML = contentHTML;
+                    canvas.appendChild(stepEl);
+                });
+
+                document.querySelectorAll('.gallery-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        openModal(parseInt(e.target.dataset.index));
+                    });
+                });
+
+                goToStep(0);
+            }
+
+            function goToStep(index) {
+                currentIndex = index;
+                const layout = layoutData[index];
+
+                const targetScale = 1 / layout.scale;
+                const targetX = -layout.x;
+                const targetY = -layout.y;
+                const targetRotate = -layout.rotate;
+
+                canvas.style.transform = `scale(${targetScale}) rotate(${targetRotate}deg) translate(${targetX}px, ${targetY}px)`;
+                
+                document.querySelectorAll('.step').forEach((el, i) => {
+                    el.classList.toggle('active', i === index);
+                });
+            }
+
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+            const modalImagesContainer = document.getElementById('modal-images-container');
+            const modalTitle = document.getElementById('modal-title');
+
+            function openModal(index) {
+                const data = timelineData[index];
+                if (!data.images || data.images.length === 0) return;
+                modalImagesContainer.innerHTML = '';
+                modalTitle.textContent = data.title;
+                data.images.forEach(img => {
+                    const imgElement = document.createElement('img');
+                    imgElement.src = img.url;
+                    imgElement.alt = img.alt;
+                    imgElement.classList.add('modal-image', 'object-contain', 'rounded-lg', 'bg-black');
+                    modalImagesContainer.appendChild(imgElement);
+                });
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.style.opacity = 1;
+                    modalContent.style.opacity = 1;
+                    modalContent.style.transform = 'scale(1)';
+                }, 10);
+            }
+
+            function closeModal() {
+                modal.style.opacity = 0;
+                modalContent.style.opacity = 0;
+                modalContent.style.transform = 'scale(0.95)';
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            }
+
+            modalCloseBtn.addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+            document.addEventListener('keydown', (e) => {
+                const isModalOpen = !modal.classList.contains('hidden');
+                if (e.code === 'Escape' && isModalOpen) closeModal();
+                
+                if (!isModalOpen) {
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        goToStep((currentIndex + 1) % timelineData.length);
+                    }
+                }
+            });
+
+            initialize();
+        });
+    </script>
+</body>
+</html>
